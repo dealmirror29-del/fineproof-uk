@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "bullmq": "^5.63.2",
+    "ioredis": "^5.8.2",
     "next": "^14.2.33",
     "node-fetch": "^2.7.0",
     "puppeteer": "^24.30.0",

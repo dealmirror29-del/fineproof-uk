@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { queue } from '../../lib/queue';
 
 // Simple in-memory rate limiter and concurrency limiter.
 // NOTE: This is per-instance and will not work across multiple serverless instances.
@@ -68,6 +69,17 @@ export default async function handler(req, res) {
   const ip = req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : req.socket.remoteAddress;
   if (!rateLimitCheck(ip)) {
     return res.status(429).json({ error: 'Rate limit exceeded' });
+  }
+
+  // If Redis queue is configured, enqueue job and return job id
+  if (queue) {
+    try {
+      const job = await queue.add('scan', { url, headers: req.headers }, { removeOnComplete: 1000, removeOnFail: 1000 });
+      return res.status(202).json({ jobId: job.id, status: 'queued' });
+    } catch (err) {
+      console.error('queue add error', err);
+      return res.status(500).json({ error: 'Failed to enqueue job' });
+    }
   }
 
   if (activeScans >= MAX_CONCURRENT_SCANS) {
