@@ -37,6 +37,15 @@ Environment variables:
 - `GROK_API_KEY` — optional: API key for Grok AI
 - `GROK_API_URL` — optional: Grok AI endpoint to analyze extracted text
 
+Security and rate-limits
+- `SCAN_API_KEY` (recommended): set this to a secret value and include it in requests using `Authorization: Bearer <key>` or the `x-api-key` header. If not set, the API will refuse non-local requests.
+- Rate limiting: in-memory per-IP limit of 5 requests per minute.
+- Concurrency: max 3 concurrent scans per instance. If the server is busy you'll receive HTTP 429.
+
+Notes:
+- The rate-limiting and concurrency controls are in-memory and per-instance — they are NOT durable across multiple serverless instances. For production you should use a centralized store (Redis) or a job queue.
+- On Vercel, running headless Chromium in serverless functions may require additional configuration or a custom chromium build. Consider running scans on a dedicated server or worker if you need reliability.
+
 Notes:
 - Puppeteer requires a headless Chromium. On Vercel, use their recommended chromium build or run scans from a server you control.
 - Keep `GROK_API_KEY` secret; set it in Vercel environment variables if you want the API to call Grok.
