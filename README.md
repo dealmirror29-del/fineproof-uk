@@ -14,6 +14,13 @@ npm install
 npm run dev
 ```
 
+### Generate Favicons
+```bash
+npm install -D sharp png-to-ico
+node tools/generate-favicon.js
+```
+This creates `public/favicon.ico` and PNG variants from `app/favicon.svg`.
+
 Deploy
 Vercel → Connected to dealmirror29-del/fineproof-uk
 # fineproof-uk
