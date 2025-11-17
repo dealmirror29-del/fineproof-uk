@@ -72,9 +72,13 @@ export default async function handler(req, res) {
   }
 
   // If Redis queue is configured, enqueue job and return job id
+  const { callbackUrl } = req.body || {};
+
   if (queue) {
     try {
-      const job = await queue.add('scan', { url, headers: req.headers }, { removeOnComplete: 1000, removeOnFail: 1000 });
+      const jobData = { url, headers: req.headers };
+      if (callbackUrl) jobData.callbackUrl = callbackUrl;
+      const job = await queue.add('scan', jobData, { removeOnComplete: 1000, removeOnFail: 1000 });
       return res.status(202).json({ jobId: job.id, status: 'queued' });
     } catch (err) {
       console.error('queue add error', err);

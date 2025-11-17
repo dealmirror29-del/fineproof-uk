@@ -32,6 +32,10 @@ Notes:
 - The `docker/worker.Dockerfile` builds a minimal image that runs `node tools/worker.js` and connects to Redis.
 - To enable Grok integration in the worker container, set `GROK_API_KEY` and `GROK_API_URL` in your environment or a `.env` used by Docker Compose.
 
+Persistent results & webhooks
+- Worker saves job results in Redis under `scan:result:<jobId>` for 24 hours (configurable via `RESULT_TTL_SECONDS`).
+- When enqueueing a job, you can pass `callbackUrl` in the POST body. The worker will POST `{ jobId, result }` to that URL when the job completes.
+
 
 ### Generate Favicons
 ```bash

@@ -1,4 +1,5 @@
 const { Queue } = require('bullmq');
+const { getResult } = require('../../../lib/results');
 const REDIS_URL = process.env.REDIS_URL || null;
 
 export default async function handler(req, res) {
@@ -15,7 +16,9 @@ export default async function handler(req, res) {
     if (!job) return res.status(404).json({ error: 'Job not found' });
 
     const state = await job.getState();
-    const returnValue = job.returnvalue || null;
+    // Try persisted result first
+    const persisted = await getResult(job.id);
+    const returnValue = persisted || job.returnvalue || null;
     return res.status(200).json({ id: job.id, state, returnValue });
   } catch (err) {
     console.error('job fetch error', err);

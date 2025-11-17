@@ -10,9 +10,10 @@ if (!REDIS_URL) {
 }
 
 const connection = new Redis(REDIS_URL);
+const { saveResult } = require('../lib/results');
 
 const worker = new Worker('scans', async (job) => {
-  const { url } = job.data;
+  const { url, callbackUrl } = job.data;
   let browser;
   try {
     browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
@@ -42,7 +43,30 @@ const worker = new Worker('scans', async (job) => {
       }
     }
 
-    return { url, text, screenshotBase64, grok: grokResult };
+    const result = { url, text, screenshotBase64, grok: grokResult };
+
+    // Persist result to Redis (for 24h default TTL)
+    try {
+      await saveResult(job.id, result);
+    } catch (e) {
+      console.error('failed to persist job result', e);
+    }
+
+    // Optional callback webhook
+    if (callbackUrl) {
+      try {
+        const fetch = (await import('node-fetch')).default;
+        await fetch(callbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: job.id, result }),
+        });
+      } catch (err) {
+        console.error('webhook callback failed', err);
+      }
+    }
+
+    return result;
   } finally {
     if (browser) await browser.close();
   }
