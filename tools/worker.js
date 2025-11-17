@@ -11,6 +11,8 @@ if (!REDIS_URL) {
 
 const connection = new Redis(REDIS_URL);
 const { saveResult } = require('../lib/results');
+const crypto = require('crypto');
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || null;
 
 const worker = new Worker('scans', async (job) => {
   const { url, callbackUrl } = job.data;
@@ -52,14 +54,21 @@ const worker = new Worker('scans', async (job) => {
       console.error('failed to persist job result', e);
     }
 
-    // Optional callback webhook
+    // Optional callback webhook (signed if WEBHOOK_SECRET configured)
     if (callbackUrl) {
       try {
         const fetch = (await import('node-fetch')).default;
+        const payload = JSON.stringify({ jobId: job.id, result });
+        const headers = { 'Content-Type': 'application/json' };
+        if (WEBHOOK_SECRET) {
+          const signature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(payload).digest('hex');
+          headers['x-signature'] = `sha256=${signature}`;
+          headers['x-signature-timestamp'] = String(Date.now());
+        }
         await fetch(callbackUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: job.id, result }),
+          headers,
+          body: payload,
         });
       } catch (err) {
         console.error('webhook callback failed', err);

@@ -36,6 +36,10 @@ Persistent results & webhooks
 - Worker saves job results in Redis under `scan:result:<jobId>` for 24 hours (configurable via `RESULT_TTL_SECONDS`).
 - When enqueueing a job, you can pass `callbackUrl` in the POST body. The worker will POST `{ jobId, result }` to that URL when the job completes.
 
+Webhook signing
+- If you set `WEBHOOK_SECRET`, the worker will sign webhook payloads using HMAC-SHA256 and include the header `x-signature: sha256=<hex>` and `x-signature-timestamp` (milliseconds since epoch). Verify the signature on the receiver by computing HMAC-SHA256 of the request body with the same secret and comparing.
+
+
 
 ### Generate Favicons
 ```bash
