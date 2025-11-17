@@ -14,6 +14,25 @@ npm install
 npm run dev
 ```
 
+Run worker with Docker (local)
+
+1. Start Redis + worker using docker-compose:
+
+```bash
+docker compose up --build
+```
+
+2. Or run worker directly (requires `REDIS_URL`):
+
+```bash
+REDIS_URL=redis://localhost:6379 node tools/worker.js
+```
+
+Notes:
+- The `docker/worker.Dockerfile` builds a minimal image that runs `node tools/worker.js` and connects to Redis.
+- To enable Grok integration in the worker container, set `GROK_API_KEY` and `GROK_API_URL` in your environment or a `.env` used by Docker Compose.
+
+
 ### Generate Favicons
 ```bash
 npm install -D sharp png-to-ico

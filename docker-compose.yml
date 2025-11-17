@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GROK_API_KEY=${GROK_API_KEY}
+      - GROK_API_URL=${GROK_API_URL}
+    depends_on:
+      - redis
+    restart: unless-stopped

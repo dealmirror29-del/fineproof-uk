@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "start:worker": "node tools/worker.js",
+    "docker:compose:up": "docker-compose up --build",
+    "docker:compose:down": "docker-compose down"
   },
   "dependencies": {
     "bullmq": "^5.63.2",
