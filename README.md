@@ -39,6 +39,50 @@ Persistent results & webhooks
 Webhook signing
 - If you set `WEBHOOK_SECRET`, the worker will sign webhook payloads using HMAC-SHA256 and include the header `x-signature: sha256=<hex>` and `x-signature-timestamp` (milliseconds since epoch). Verify the signature on the receiver by computing HMAC-SHA256 of the request body with the same secret and comparing.
 
+Replay protection and verification
+- The worker signs the payload together with the timestamp: signature = HMAC_SHA256(WEBHOOK_SECRET, `${timestamp}.${body}`). The worker includes both `x-signature` (format `sha256=<hex>`) and `x-signature-timestamp` (milliseconds since epoch).
+- Receiver verification steps:
+	1. Read `x-signature` and `x-signature-timestamp` from headers and the raw request body.
+	2. Compute `expected = 'sha256=' + HMAC_SHA256(WEBHOOK_SECRET, `${timestamp}.${body}`)`.
+	3. Compare `expected` and `x-signature` using `crypto.timingSafeEqual`.
+	4. Validate timestamp is recent (within `WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS`, default 300 seconds) to prevent replay attacks.
+
+Example Node/Express verification (copy-paste):
+```js
+const crypto = require('crypto');
+const express = require('express');
+const app = express();
+
+// Use raw body parsing so signature verifies exactly against the bytes
+app.post('/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+	const secret = process.env.WEBHOOK_SECRET;
+	const sigHeader = req.headers['x-signature'] || '';
+	const timestamp = req.headers['x-signature-timestamp'];
+	const bodyRaw = req.body.toString();
+
+	if (!sigHeader || !timestamp) return res.status(401).send('Missing signature headers');
+
+	// Check timestamp freshness
+	const tolerance = (parseInt(process.env.WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS || '300', 10)) * 1000;
+	const ts = parseInt(timestamp, 10);
+	if (Math.abs(Date.now() - ts) > tolerance) return res.status(400).send('Stale timestamp');
+
+	const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(`${timestamp}.${bodyRaw}`).digest('hex');
+	try {
+		const a = Buffer.from(sigHeader);
+		const b = Buffer.from(expected);
+		if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).send('Invalid signature');
+	} catch (e) {
+		return res.status(401).send('Invalid signature');
+	}
+
+	const payload = JSON.parse(bodyRaw);
+	// handle payload
+	res.status(200).send('ok');
+});
+```
+
+
 
 
 ### Generate Favicons

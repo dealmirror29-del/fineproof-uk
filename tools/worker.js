@@ -61,9 +61,12 @@ const worker = new Worker('scans', async (job) => {
         const payload = JSON.stringify({ jobId: job.id, result });
         const headers = { 'Content-Type': 'application/json' };
         if (WEBHOOK_SECRET) {
-          const signature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(payload).digest('hex');
+          const timestamp = String(Date.now());
+          // Sign timestamp + '.' + payload to bind timestamp to the signature (prevents tampering)
+          const toSign = `${timestamp}.${payload}`;
+          const signature = crypto.createHmac('sha256', WEBHOOK_SECRET).update(toSign).digest('hex');
           headers['x-signature'] = `sha256=${signature}`;
-          headers['x-signature-timestamp'] = String(Date.now());
+          headers['x-signature-timestamp'] = timestamp;
         }
         await fetch(callbackUrl, {
           method: 'POST',
